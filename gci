@@ -1,0 +1,13 @@
+#!/bin/bash
+
+GCI_VERSION=1.0
+GCI_BUILD=1.0.0
+
+ARG1=$1
+ARG2=$2
+
+if [[ $EUID -ne 0 ]]; then
+    echo "GCI requires root privileges"
+    exit 1
+fi
+
