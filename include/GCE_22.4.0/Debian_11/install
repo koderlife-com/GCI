@@ -1,0 +1,53 @@
+#!/bin/bash
+
+set -e
+
+echo -n "Do you want to install Greenbone Community Edition 22.4.0? (Y/n) "
+read RET
+
+if [ "$RET" == "no" ] || [ "$RET" == "NO" ] || [ "$RET" == "No" ] || \
+    [ "$RET" == "n" ] || [ "$RET" == "N" ]; then
+    exit
+elif [ "$RET" == "yes" ] || [ "$RET" == "YES" ] || [ "$RET" == "Yes" ] || \
+        [ "$RET" == "Y" ] || [ "$RET" == "y" ] || [ "$RET" == "" ]; then
+   
+   
+    useradd -r -M -U -s /usr/sbin/nologin gvm || true
+    
+    apt update
+    apt -y install wget
+
+    mkdir -p /opt/GCE_22.4.0
+    mkdir -p /opt/GCE_22.4.0/src
+
+    apt install -y --no-install-recommends \
+	build-essential \
+  	curl \
+  	cmake \
+  	pkg-config \
+  	python3 \
+  	python3-pip \
+  	gnupg
+
+    curl -f -L https://www.greenbone.net/GBCommunitySigningKey.asc -o /tmp/GBCommunitySigningKey.asc
+    gpg --import /tmp/GBCommunitySigningKey.asc
+
+    apt install -y \
+    	libglib2.0-dev \
+  	libgpgme-dev \
+  	libgnutls28-dev \
+  	uuid-dev \
+  	libssh-gcrypt-dev \
+  	libhiredis-dev \
+  	libxml2-dev \
+  	libpcap-dev \
+  	libnet1-dev \
+  	libpaho-mqtt-dev \
+	libldap2-dev \
+        libradcli-dev
+
+
+
+else
+    exit
+fi
