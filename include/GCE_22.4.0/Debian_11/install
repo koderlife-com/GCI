@@ -12,7 +12,9 @@ elif [ "$RET" == "yes" ] || [ "$RET" == "YES" ] || [ "$RET" == "Yes" ] || \
         [ "$RET" == "Y" ] || [ "$RET" == "y" ] || [ "$RET" == "" ]; then
    
     export GCE_VERSION=22.4.0
-   
+    export SOURCE_DIR=/opt/GCE_$GCE_VERSION/src
+    export INSTALL_PREFIX=/opt/GCE_$GCE_VERSION   
+
     useradd -r -M -U -s /usr/sbin/nologin gvm || true
     
     apt update
@@ -153,9 +155,74 @@ curl -f -L https://github.com/greenbone/pg-gvm/archive/refs/tags/v$GCE_VERSION.t
 tar -C /opt/GCE_$GCE_VERSION/src -xvzf /opt/GCE_$GCE_VERSION/src/pg-gvm-$GCE_VERSION.tar.gz
 rm /opt/GCE_$GCE_VERSION/src/pg-gvm-$GCE_VERSION.tar.gz
 
+cd /opt/GCE_$GCE_VERSION/src/pg-gvm-$GCE_VERSION
+mkdir -p build
+cd build
 
+cmake /opt/GCE_$GCE_VERSION/src/pg-gvm-$GCE_VERSION \
+  -DCMAKE_BUILD_TYPE=Release
+
+make -j$(nproc)
+make install
 
 ############################################ END - PG-GVM ###########################################
+
+
+
+
+############################################ BEGIN - GSA ###########################################
+
+apt -y install lsb-release
+
+export NODE_VERSION=node_14.x
+export KEYRING=/usr/share/keyrings/nodesource.gpg
+export DISTRIBUTION="$(lsb_release -s -c)"
+
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | gpg --dearmor | sudo tee "$KEYRING" >/dev/null
+gpg --no-default-keyring --keyring "$KEYRING" --list-keys
+
+echo "deb [signed-by=$KEYRING] https://deb.nodesource.com/$NODE_VERSION $DISTRIBUTION main" | sudo tee /etc/apt/sources.list.d/nodesource.list
+echo "deb-src [signed-by=$KEYRING] https://deb.nodesource.com/$NODE_VERSION $DISTRIBUTION main" | sudo tee -a /etc/apt/sources.list.d/nodesource.list
+
+
+sudo apt update
+sudo apt install -y nodejs
+
+
+curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+
+sudo apt update
+sudo apt install -y yarn
+
+
+curl -f -L https://github.com/greenbone/gsa/archive/refs/tags/v$GCE_VERSION.tar.gz -o /opt/GCE_$GCE_VERSION/src/gsa-$GCE_VERSION.tar.gz
+tar -C /opt/GCE_$GCE_VERSION/src -xvzf /opt/GCE_$GCE_VERSION/src/gsa-$GCE_VERSION.tar.gz
+rm $SOURCE_DIR/gsa-$GCE_VERSION.tar.gz
+
+cd $SOURCE_DIR/gsa-$GCE_VERSION
+rm -rf build
+
+yarn
+yarn build
+
+
+mkdir -p $INSTALL_PREFIX/share/gvm/gsad/web/
+cp -r build/* $INSTALL_PREFIX/share/gvm/gsad/web/
+
+
+apt install -y \
+    libmicrohttpd-dev \
+    libxml2-dev \
+    libglib2.0-dev \
+    libgnutls28-dev
+
+
+
+
+
+
+############################################ END - GSA ###########################################
 
 else
     exit
