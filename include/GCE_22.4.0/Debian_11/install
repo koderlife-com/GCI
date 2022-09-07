@@ -11,14 +11,15 @@ if [ "$RET" == "no" ] || [ "$RET" == "NO" ] || [ "$RET" == "No" ] || \
 elif [ "$RET" == "yes" ] || [ "$RET" == "YES" ] || [ "$RET" == "Yes" ] || \
         [ "$RET" == "Y" ] || [ "$RET" == "y" ] || [ "$RET" == "" ]; then
    
+    export GCE_VERSION=22.4.0
    
     useradd -r -M -U -s /usr/sbin/nologin gvm || true
     
     apt update
     apt -y install wget
 
-    mkdir -p /opt/GCE_22.4.0
-    mkdir -p /opt/GCE_22.4.0/src
+    mkdir -p /opt/GCE_$GCE_VERSION
+    mkdir -p /opt/GCE_$GCE_VERSION/src
 
     apt install -y --no-install-recommends \
 	build-essential \
@@ -32,21 +33,129 @@ elif [ "$RET" == "yes" ] || [ "$RET" == "YES" ] || [ "$RET" == "Yes" ] || \
     curl -f -L https://www.greenbone.net/GBCommunitySigningKey.asc -o /tmp/GBCommunitySigningKey.asc
     gpg --import /tmp/GBCommunitySigningKey.asc
 
+
+############################################ BEGIN - GVM-LIBS ###########################################
+
     apt install -y \
-    	libglib2.0-dev \
-  	libgpgme-dev \
-  	libgnutls28-dev \
-  	uuid-dev \
-  	libssh-gcrypt-dev \
-  	libhiredis-dev \
-  	libxml2-dev \
-  	libpcap-dev \
-  	libnet1-dev \
-  	libpaho-mqtt-dev \
-	libldap2-dev \
+        libglib2.0-dev \
+  	    libgpgme-dev \
+  	    libgnutls28-dev \
+  	    uuid-dev \
+  	    libssh-gcrypt-dev \
+  	    libhiredis-dev \
+  	    libxml2-dev \
+  	    libpcap-dev \
+  	    libnet1-dev \
+  	    libpaho-mqtt-dev \
+	    libldap2-dev \
         libradcli-dev
 
 
+    
+    curl -f -L https://github.com/greenbone/gvm-libs/archive/refs/tags/v$GCE_VERSION.tar.gz -o /opt/GCE_$GCE_VERSION/src/gvm-libs-$GCE_VERSION.tar.gz
+    curl -f -L https://github.com/greenbone/gvm-libs/releases/download/v$GCE_VERSION/gvm-libs-$GCE_VERSION.tar.gz.asc -o /opt/GCE_$GCE_VERSION/src/gvm-libs-$GCE_VERSION.tar.gz.asc        
+    gpg --verify /opt/GCE_$GCE_VERSION/src/gvm-libs-$GCE_VERSION.tar.gz.asc /opt/GCE_$GCE_VERSION/src/gvm-libs-$GCE_VERSION.tar.gz
+        
+    tar -C /opt/GCE_$GCE_VERSION/src  -xvzf /opt/GCE_$GCE_VERSION/src/gvm-libs-$GCE_VERSION.tar.gz
+    rm /opt/GCE_$GCE_VERSION/src/gvm-libs-$GCE_VERSION.tar.gz
+    rm /opt/GCE_$GCE_VERSION/src/gvm-libs-$GCE_VERSION.tar.gz.asc
+    cd /opt/GCE_$GCE_VERSION/src/gvm-libs-$GCE_VERSION
+    mkdir -p build
+    cd build    
+
+
+    cmake /opt/GCE_$GCE_VERSION/src/gvm-libs-$GCE_VERSION \
+        -DCMAKE_INSTALL_PREFIX=/opt/GCE_$GCE_VERSION \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DSYSCONFDIR=/etc \
+        -DLOCALSTATEDIR=/var
+
+    make -j$(nproc)
+    make install 
+
+############################################ END - GVM-LIBS ###########################################
+
+
+
+
+############################################ BEGIN - GVMD ###########################################
+    export PKG_CONFIG_PATH=/opt/GCE_$GCE_VERSION/lib/pkgconfig:$PKG_CONFIG_PATH
+
+    apt install -y \
+        libglib2.0-dev \
+        libgnutls28-dev \
+        libpq-dev \
+        postgresql-server-dev-13 \
+        libical-dev \
+        xsltproc \
+        rsync \
+        libbsd-dev \
+        libgpgme-dev
+
+    apt install -y --no-install-recommends \
+        texlive-latex-extra \
+        texlive-fonts-recommended \
+        xmlstarlet \
+        zip \
+        rpm \
+        fakeroot \
+        dpkg \
+        nsis \
+        gnupg \
+        gpgsm \
+        wget \
+        sshpass \
+        openssh-client \
+        socat \
+        snmp \
+        python3 \
+        smbclient \
+        python3-lxml \
+        gnutls-bin \
+        xml-twig-tools
+
+curl -f -L https://github.com/greenbone/gvmd/archive/refs/tags/v$GCE_VERSION.tar.gz -o /opt/GCE_$GCE_VERSION/src/gvmd-$GCE_VERSION.tar.gz
+tar -C /opt/GCE_$GCE_VERSION/src -xvzf /opt/GCE_$GCE_VERSION/src/gvmd-$GCE_VERSION.tar.gz
+rm /opt/GCE_$GCE_VERSION/src/gvmd-$GCE_VERSION.tar.gz
+
+cd /opt/GCE_$GCE_VERSION/src/gvmd-$GCE_VERSION
+mkdir -p build
+cd build
+
+cmake /opt/GCE_$GCE_VERSION/src/gvmd-$GCE_VERSION \
+  -DCMAKE_INSTALL_PREFIX=/opt/GCE_$GCE_VERSION \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DLOCALSTATEDIR=/var \
+  -DSYSCONFDIR=/etc \
+  -DGVM_DATA_DIR=/var \
+  -DGVMD_RUN_DIR=/run/gvmd \
+  -DOPENVAS_DEFAULT_SOCKET=/run/ospd/ospd-openvas.sock \
+  -DGVM_FEED_LOCK_PATH=/var/lib/gvm/feed-update.lock \
+  -DSYSTEMD_SERVICE_DIR=/lib/systemd/system \
+  -DLOGROTATE_DIR=/etc/logrotate.d
+
+make -j$(nproc)
+make install
+
+############################################ END - GVMD ###########################################
+
+
+
+
+############################################ BEGIN - PG-GVM ###########################################
+
+apt install -y \
+        libglib2.0-dev \
+        postgresql-server-dev-13 \
+        libical-dev
+
+curl -f -L https://github.com/greenbone/pg-gvm/archive/refs/tags/v$GCE_VERSION.tar.gz -o /opt/GCE_$GCE_VERSION/src/pg-gvm-$GCE_VERSION.tar.gz
+tar -C /opt/GCE_$GCE_VERSION/src -xvzf /opt/GCE_$GCE_VERSION/src/pg-gvm-$GCE_VERSION.tar.gz
+rm /opt/GCE_$GCE_VERSION/src/pg-gvm-$GCE_VERSION.tar.gz
+
+
+
+############################################ END - PG-GVM ###########################################
 
 else
     exit
