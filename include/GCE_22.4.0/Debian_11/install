@@ -218,11 +218,86 @@ apt install -y \
     libgnutls28-dev
 
 
+curl -f -L https://github.com/greenbone/gsad/archive/refs/tags/v$GCE_VERSION.tar.gz -o $SOURCE_DIR/gsad-$GCE_VERSION.tar.gz
+tar -C $SOURCE_DIR -xvzf $SOURCE_DIR/gsad-$GCE_VERSION.tar.gz
+rm $SOURCE_DIR/gsad-$GCE_VERSION.tar.gz
+cd $SOURCE_DIR/gsad-$GCE_VERSION
+mkdir -p build
+cd build
 
+cmake $SOURCE_DIR/gsad-$GCE_VERSION \
+  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DSYSCONFDIR=/etc \
+  -DLOCALSTATEDIR=/var \
+  -DGVMD_RUN_DIR=/run/gvmd \
+  -DGSAD_RUN_DIR=/run/gsad \
+  -DLOGROTATE_DIR=/etc/logrotate.d
+
+make -j$(nproc)
+make install
 
 
 
 ############################################ END - GSA ###########################################
+
+
+
+
+
+############################################ BEGIN - OPENVAS-SMB ###########################################
+
+apt install -y \
+    gcc-mingw-w64 \
+    libgnutls28-dev \
+    libglib2.0-dev \
+    libpopt-dev \
+    libunistring-dev \
+    heimdal-dev \
+    perl-base
+
+
+curl -f -L https://github.com/greenbone/openvas-smb/archive/refs/tags/v$GCE_VERSION.tar.gz -o $SOURCE_DIR/openvas-smb-$GCE_VERSION.tar.gz
+tar -C $SOURCE_DIR -xvzf $SOURCE_DIR/openvas-smb-$GCE_VERSION.tar.gz
+rm $SOURCE_DIR/openvas-smb-$GCE_VERSION.tar.gz
+cd $SOURCE_DIR/openvas-smb-$GCE_VERSION
+mkdir -p build
+cd build
+
+cmake $SOURCE_DIR/openvas-smb-$GCE_VERSION \
+  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX \
+  -DCMAKE_BUILD_TYPE=Release
+
+make -j$(nproc)
+make install
+
+
+############################################ END - OPENVAS-SMB ###########################################
+
+
+
+############################################ BEGIN - OPENVAS-SCANNER ###########################################
+
+apt install -y \
+    bison \
+    libglib2.0-dev \
+    libgnutls28-dev \
+    libgcrypt20-dev \
+    libpcap-dev \
+    libgpgme-dev \
+    libksba-dev \
+    rsync \
+    nmap \
+    libjson-glib-dev \
+    libbsd-dev \
+    python3-impacket \
+    libsnmp-dev
+
+
+
+############################################ END - OPENVAS-SCANNER ###########################################
+
+
 
 else
     exit
